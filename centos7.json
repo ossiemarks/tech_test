@@ -1,0 +1,102 @@
+{
+  "variables": {
+    "version": "",
+    "access_token": "",
+    "region": "eu-west-2",
+    "aws_access_key": "{{env `AWS_ACCESS_KEY_ID`}}",
+    "aws_secret_key": "{{env `AWS_SECRET_ACCESS_KEY`}}"
+  },
+  "provisioners": [
+    {
+      "type": "shell",
+      "execute_command": "echo 'vagrant' | {{.Vars}} sudo -S -E bash '{{.Path}}'",
+      "script": "scripts/ansible.sh"
+    },
+    {
+      "type": "ansible-local",
+      "playbook_file": "ansible/main.yml",
+      "role_paths": [
+                "ansible/roles/jenkins"
+              ]
+    },
+    {
+      "type": "shell",
+      "execute_command": "echo 'vagrant' | {{.Vars}} sudo -S -E bash '{{.Path}}'",
+      "script": "scripts/cleanup.sh"
+    }
+  ],
+  "builders": [
+    {
+    "name": "backend-eu-west-2",
+    "type": "amazon-ebs",
+    "region": "eu-west-2",
+    "access_key": "{{user `aws_access_key`}}",
+    "secret_key": "{{user `aws_secret_key`}}",
+    "vpc_id": "vpc-70488518",
+    "subnet_id": "subnet-df46a9a5",
+    "source_ami": "ami-4726cb20",
+    "ami_name": "backend-{{timestamp}}",
+    "instance_type": "t2.micro",
+    "ssh_username": "centos"
+  }, {
+    "name": "backend-ca-central-1",
+    "type": "amazon-ebs",
+    "region": "ca-central-1",
+    "access_key": "{{user `aws_access_key`}}",
+    "secret_key": "{{user `aws_secret_key`}}",
+    "vpc_id": "vpc-c1e01ba9",
+    "subnet_id": "subnet-6338fe0b",
+    "source_ami": "ami-456aea21",
+    "ami_name": "backend-{{timestamp}}",
+    "instance_type": "t2.micro",
+    "ssh_username": "centos"
+  },
+    {
+      "type": "virtualbox-iso",
+      "boot_command": [
+        "<tab> text ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ks.cfg<enter><wait>"
+      ],
+      "boot_wait": "10s",
+      "disk_size": 81920,
+      "guest_os_type": "RedHat_64",
+      "headless": false,
+      "http_directory": "http",
+      "iso_urls": [
+        "CentOS-7-x86_64-Minimal-1804.iso",
+        "http://mirrors.mit.edu/centos/7/isos/x86_64/CentOS-7-x86_64-Minimal-1810.iso"
+      ],
+      "iso_checksum_type": "sha256",
+      "iso_checksum": "38d5d51d9d100fd73df031ffd6bd8b1297ce24660dc8c13a3b8b4534a4bd291c",
+      "ssh_username": "vagrant",
+      "ssh_password": "vagrant",
+      "ssh_port": 22,
+      "ssh_wait_timeout": "160m",
+      "shutdown_command": "echo 'vagrant'|sudo -S /sbin/halt -h -p",
+      "guest_additions_path": "VBoxGuestAdditions_{{.Version}}.iso",
+      "virtualbox_version_file": ".vbox_version",
+      "vm_name": "nokia-ott-pipeline",
+      "vboxmanage": [
+        [
+          "modifyvm",
+          "{{.Name}}",
+          "--memory",
+          "6096"
+        ],
+        [
+          "modifyvm",
+          "{{.Name}}",
+          "--cpus",
+          "4"
+        ]
+      ]
+    }
+  ],
+  "post-processors": [
+    [
+      {
+        "output": "builds/{{.Provider}}-centos7.box",
+        "type": "vagrant"
+      }
+    ]
+  ]
+}
